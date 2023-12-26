@@ -1,0 +1,3 @@
+backend/venv
+backend/docker-compose-local.yaml
+migrations

@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import date, time
 from typing import Annotated, Literal, get_args
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from sqlalchemy import Enum, ForeignKey, String, Boolean
-from sqlalchemy.orm import DeclarativeBase ,Mapped, mapped_column
+from sqlalchemy import Enum, ForeignKey, String, Boolean, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase ,Mapped, mapped_column, relationship
 
 
 
@@ -16,6 +16,7 @@ Gender = Literal["FEMALE", "MALE"]
 
 class Base(DeclarativeBase):
     pass
+
 
 class User(SQLAlchemyBaseUserTable[int], Base):
     __tablename__ = "user_account"
@@ -39,7 +40,8 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     hashed_password: Mapped[str] = mapped_column(
     String(length=1024), nullable=False
     )
-
+    meal: Mapped[list["Meal"]] = relationship()
+    workout: Mapped[list["Workout"]] = relationship()
 
 
 class Meal(Base):
@@ -49,7 +51,9 @@ class Meal(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user_account.id", ondelete="CASCADE")
     )
-    datetime: Mapped[datetime]
+    date: Mapped[date]
+    time: Mapped[time]
+    portions: Mapped[list["Portion"]] = relationship()
 
 
 class Food(Base):
@@ -63,13 +67,25 @@ class Food(Base):
 
 class Portion(Base):
     __tablename__ = "portion"
-
-    id: Mapped[intpk]
-    food_name: Mapped[str] = mapped_column(
-        String(256), ForeignKey("food.name", onupdate="CASCADE")
+    __table_args__ = (
+        UniqueConstraint(
+            "food_name",
+            "meal_id",
+            name="idx_unique_meal_food"
+        ),
     )
-    meal_id: Mapped[int] = mapped_column(ForeignKey("meal.id"))
+
+    food_name: Mapped[str] = mapped_column(
+        String(256),
+        ForeignKey("food.name", onupdate="CASCADE"),
+        primary_key=True
+    )
+    meal_id: Mapped[int] = mapped_column(
+        ForeignKey("meal.id"),
+        primary_key=True
+    )
     mass: Mapped[float]
+    food: Mapped["Food"] = relationship()
 
 
 class Workout(Base):
@@ -81,6 +97,7 @@ class Workout(Base):
     )
     date: Mapped[date]
     duration: Mapped[int]
+    exercise_sets: Mapped[list["ExerciseSet"]] = relationship()
 
 
 class Exercise(Base):
@@ -100,6 +117,7 @@ class ExerciseSet(Base):
     number: Mapped[int]
     burden_weight: Mapped[int]
     repetitions_count: Mapped[int]
+    exercise: Mapped["Exercise"] = relationship()
 
 
 
